@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dominant Color Picker</title>
+  <meta name="description" content="Extract dominant colors from any image — upload or paste a URL. Free, client-side, no server needed." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #1a1a1a;
+      --ink-muted: #6b6b6b;
+      --ink-faint: #b0b0b0;
+      --paper: #fafaf8;
+      --paper-2: #f0f0ed;
+      --paper-3: #e4e4e0;
+      --accent: #d4552a;
+      --accent-light: #f5e8e3;
+      --border: #d8d8d4;
+      --radius: 6px;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: grid;
+      place-items: start center;
+      padding: 48px 20px 80px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+    }
+
+    /* ---- Header ---- */
+    header {
+      margin-bottom: 36px;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 32px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.5px;
+    }
+
+    .version-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      background: var(--ink);
+      color: var(--paper);
+      padding: 2px 6px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+      position: relative;
+      top: -2px;
+    }
+
+    .tagline {
+      font-size: 12px;
+      color: var(--ink-muted);
+      font-weight: 300;
+      letter-spacing: 0.02em;
+    }
+
+    /* ---- Divider ---- */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ---- Tabs ---- */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 10px 16px;
+      margin-bottom: -1px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--ink-muted);
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab:hover:not(.active) { color: var(--ink); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ---- Upload area ---- */
+    .upload-area {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s;
+      background: var(--paper-2);
+    }
+
+    .upload-area:hover,
+    .upload-area.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .upload-area input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .upload-icon {
+      font-size: 28px;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .upload-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ink);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .upload-hint {
+      font-size: 11px;
+      color: var(--ink-faint);
+      font-weight: 300;
+    }
+
+    /* ---- URL input ---- */
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--paper-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 300;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--ink-faint); }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover { background: var(--accent); }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ---- Error ---- */
+    .error-msg {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border: 1px solid #e8c4b8;
+      background: #fdf0eb;
+      border-radius: var(--radius);
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 400;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+
+    /* ---- Loading ---- */
+    .loading {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px;
+      font-size: 12px;
+      color: var(--ink-muted);
+      font-weight: 300;
+    }
+
+    .loading.visible { display: flex; }
+
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--paper-3);
+      border-top-color: var(--ink);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- Results ---- */
+    .preview-section {
+      margin-top: 28px;
+      display: none;
+    }
+
+    .preview-section.visible { display: block; }
+
+    .preview-img-wrap {
+      background: var(--paper-3);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .preview-img-wrap img {
+      max-width: 100%;
+      max-height: 180px;
+      border-radius: 3px;
+      object-fit: contain;
+    }
+
+    /* Config row */
+    .config-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .results-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+
+    .count-badge {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--ink-faint);
+    }
+
+    /* ---- Swatches ---- */
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+      gap: 10px;
+    }
+
+    .swatch {
+      cursor: pointer;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      transition: transform 0.1s, border-color 0.15s;
+      background: var(--paper);
+    }
+
+    .swatch:hover {
+      transform: translateY(-2px);
+      border-color: var(--ink);
+    }
+
+    .swatch.dominant {
+      border-color: var(--accent);
+    }
+
+    .swatch-block {
+      height: 56px;
+      width: 100%;
+    }
+
+    .swatch-info {
+      padding: 6px 8px 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .swatch-hex {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+      margin-bottom: 2px;
+    }
+
+    .swatch-pct {
+      font-size: 9px;
+      font-weight: 300;
+      color: var(--ink-faint);
+    }
+
+    .dominant-tag {
+      float: right;
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    /* ---- Export bar ---- */
+    .export-bar {
+      margin-top: 20px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .export-label {
+      font-size: 10px;
+      color: var(--ink-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+
+    .export-input {
+      flex: 1;
+      background: var(--paper-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 10px;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 300;
+      color: var(--ink-muted);
+      outline: none;
+      cursor: text;
+    }
+
+    .btn-copy-all {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 7px 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-copy-all:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ---- Footer ---- */
+    footer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--ink-faint);
+      font-weight: 300;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    footer a {
+      color: var(--ink-muted);
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    footer a:hover { color: var(--accent); border-color: var(--accent); }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--ink);
+      color: var(--paper);
+      padding: 8px 18px;
+      border-radius: var(--radius);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 400;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-row">
+      <h1>Dominant Color Picker</h1>
+      <span class="version-badge">v1.0</span>
+    </div>
+    <p class="tagline">extract dominant colors from any image — runs entirely in your browser</p>
+  </header>
+
+  <hr class="divider" />
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="upload">↑ Upload</button>
+    <button class="tab" data-tab="url">⊕ Image URL</button>
+  </div>
+
+  <!-- Upload tab -->
+  <div class="tab-panel active" id="tab-upload">
+    <div class="upload-area" id="upload-area">
+      <input type="file" id="file-input" accept="image/*" />
+      <span class="upload-icon">▦</span>
+      <span class="upload-label">Drop image here or click to browse</span>
+      <span class="upload-hint">PNG · JPG · GIF · WEBP · SVG</span>
+    </div>
+  </div>
+
+  <!-- URL tab -->
+  <div class="tab-panel" id="tab-url">
+    <div class="input-row">
+      <input type="text" id="url-input" placeholder="https://example.com/image.jpg" />
+      <button class="btn-primary" id="url-submit">Extract</button>
+    </div>
+    <div class="error-msg" id="url-error">
+      Failed to load image. Confirm the URL is valid and CORS is permitted on that server.
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <span>Analyzing pixels…</span>
+  </div>
+
+  <!-- Results -->
+  <div class="preview-section" id="preview-section">
+    <div class="preview-img-wrap">
+      <img id="preview-img" src="" alt="Preview" />
+    </div>
+
+    <div class="config-row">
+      <span class="results-label">Dominant Colors</span>
+      <span class="count-badge" id="count-badge"></span>
+    </div>
+
+    <div class="swatches" id="swatches"></div>
+
+    <div class="export-bar">
+      <span class="export-label">Export</span>
+      <input type="text" class="export-input" id="export-input" readonly placeholder="hex values appear here" />
+      <button class="btn-copy-all" id="copy-all-btn">Copy all</button>
+    </div>
+  </div>
+
+  <footer>
+    <span>client-side only · no data leaves your browser</span>
+    <span>
+      <a href="https://github.com/dmitryadam/dominant-color-picker" target="_blank">GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="https://dmitryadam.github.io/dominant-color-picker/dominant-color-picker.js" target="_blank">CDN</a>
+    </span>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const CONFIG = {
+  topN: 8,
+  bucketSize: 24,
+  whiteThreshold: 220,
+  blackThreshold: 30,
+  minSaturation: 0.12,
+};
+
+// ============================================================
+// TABS
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    hideResults();
+  });
+});
+
+// ============================================================
+// UPLOAD
+// ============================================================
+const uploadArea = document.getElementById('upload-area');
+const fileInput  = document.getElementById('file-input');
+
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag-over'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag-over'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processFile(file);
+});
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+});
+
+function processFile(file) {
+  loadAndAnalyze(URL.createObjectURL(file), true);
+}
+
+// ============================================================
+// URL
+// ============================================================
+document.getElementById('url-submit').addEventListener('click', () => {
+  const url = document.getElementById('url-input').value.trim();
+  if (!url) return;
+  document.getElementById('url-error').classList.remove('visible');
+  loadAndAnalyze(url, false);
+});
+
+document.getElementById('url-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('url-submit').click();
+});
+
+// ============================================================
+// CORE — load & analyze
+// ============================================================
+function loadAndAnalyze(src, isBlob) {
+  showLoading(true);
+  hideResults();
+
+  function tryLoad(cacheBust) {
+    const img = new Image();
+    if (!isBlob) img.crossOrigin = 'anonymous';
+
+    img.onload = function () {
+      try {
+        const colors = extractColors(img);
+        document.getElementById('preview-img').src = src;
+        showResults(colors);
+      } catch (e) {
+        if (!isBlob && !cacheBust) {
+          tryLoad(true);
+        } else {
+          document.getElementById('url-error').classList.add('visible');
+        }
+      } finally {
+        showLoading(false);
+      }
+    };
+
+    img.onerror = () => {
+      showLoading(false);
+      document.getElementById('url-error').classList.add('visible');
+    };
+
+    img.src = cacheBust
+      ? src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now()
+      : src;
+  }
+
+  tryLoad(false);
+}
+
+// ============================================================
+// CORE — extract dominant colors (client-side quantization)
+// ============================================================
+function extractColors(img) {
+  const canvas = document.createElement('canvas');
+  canvas.width  = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data; // throws if CORS tainted
+
+  const colorMap = {};
+  let totalPixels = 0;
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+    if (a < 128) continue; // skip transparent
+    // skip near-white
+    if (r > CONFIG.whiteThreshold && g > CONFIG.whiteThreshold && b > CONFIG.whiteThreshold) continue;
+    // skip near-black
+    if (r < CONFIG.blackThreshold && g < CONFIG.blackThreshold && b < CONFIG.blackThreshold) continue;
+    // skip near-grey (low saturation)
+    const maxC = Math.max(r, g, b), minC = Math.min(r, g, b);
+    const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+    if (sat < CONFIG.minSaturation) continue;
+
+    // quantize into buckets
+    const bs = CONFIG.bucketSize;
+    const qr = Math.min(255, Math.round(r / bs) * bs);
+    const qg = Math.min(255, Math.round(g / bs) * bs);
+    const qb = Math.min(255, Math.round(b / bs) * bs);
+    const key = `${qr},${qg},${qb}`;
+    colorMap[key] = (colorMap[key] || 0) + 1;
+    totalPixels++;
+  }
+
+  const toHex = v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0');
+
+  return Object.entries(colorMap)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, CONFIG.topN)
+    .map(([key, count], idx) => {
+      const [r, g, b] = key.split(',').map(Number);
+      const hex = ('#' + toHex(r) + toHex(g) + toHex(b)).toUpperCase();
+      const pct = totalPixels > 0 ? ((count / totalPixels) * 100).toFixed(1) : '0.0';
+      return { hex, pct, dominant: idx === 0 };
+    })
+    .filter(c => /^#[0-9A-F]{6}$/.test(c.hex));
+}
+
+// ============================================================
+// UI HELPERS
+// ============================================================
+let currentColors = [];
+
+function showResults(colors) {
+  currentColors = colors;
+  const swatches = document.getElementById('swatches');
+  swatches.innerHTML = '';
+
+  colors.forEach(({ hex, pct, dominant }) => {
+    const swatch = document.createElement('div');
+    swatch.className = 'swatch' + (dominant ? ' dominant' : '');
+    swatch.title = `Click to copy ${hex}`;
+    swatch.innerHTML = `
+      <div class="swatch-block" style="background:${hex}"></div>
+      <div class="swatch-info">
+        ${dominant ? '<span class="dominant-tag">top</span>' : ''}
+        <span class="swatch-hex">${hex}</span>
+        <span class="swatch-pct">${pct}%</span>
+      </div>
+    `;
+    swatch.addEventListener('click', () => copyToClipboard(hex, `Copied ${hex}`));
+    swatches.appendChild(swatch);
+  });
+
+  // export input
+  document.getElementById('export-input').value = colors.map(c => c.hex).join(', ');
+  document.getElementById('count-badge').textContent = `${colors.length} colors found`;
+
+  document.getElementById('preview-section').classList.add('visible');
+}
+
+function hideResults() {
+  currentColors = [];
+  document.getElementById('preview-section').classList.remove('visible');
+  document.getElementById('url-error').classList.remove('visible');
+}
+
+function showLoading(show) {
+  document.getElementById('loading').classList.toggle('visible', show);
+}
+
+// copy-all button
+document.getElementById('copy-all-btn').addEventListener('click', () => {
+  const val = document.getElementById('export-input').value;
+  if (val) copyToClipboard(val, 'All colors copied');
+});
+
+function copyToClipboard(text, msg) {
+  navigator.clipboard.writeText(text).then(() => showToast(msg || 'Copied'));
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
